@@ -176,7 +176,7 @@ export const makeCompletionApiCall = async ({
     setAbortController(newAbortController);
     setIsLoading(true);
 
-    const data: any = await apiCall(searchQuery);
+    const data: Object = await apiCall(searchQuery);
     const user_prompt = `
     user_query: ${searchQuery}
     output by analysis in  json format: ${JSON.stringify(data)}

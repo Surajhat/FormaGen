@@ -40,36 +40,37 @@ const bkHeaders = {
   // Note: Replace long token/cookie values for security in a real implementation.
 };
 
-const apiCall = async (prompt: string) => {
-  const bkReqBody = {
-    id: crypto.randomUUID(),
-    messages: [
-      { role: "user", content: prompt }
-    ],
-    model: "Best Model"
-  };
+// const apiCall = async (prompt: string) => {
+//   const bkReqBody = {
+//     id: crypto.randomUUID(),
+//     messages: [
+//       { role: "user", content: prompt }
+//     ],
+//     model: "Best Model"
+//   };
 
-  const res = await fetch('http://localhost:8001/api/chat/client/agent', {
-    method: "POST",
-    headers: bkHeaders,
-    body: JSON.stringify(bkReqBody)
-  });
-  const data = await res.json();
-  console.log("BK output:", data);
-  return data;
-  // Example expected structure of data:
-  // {
-  //   output: "...",
-  //   table_data: [...],
-  //   chart_data: [...]
-  // }
-}
+//   const res = await fetch('http://localhost:8001/api/chat/client/agent', {
+//     method: "POST",
+//     headers: bkHeaders,
+//     body: JSON.stringify(bkReqBody)
+//   });
+//   const data = await res.json();
+//   console.log("BK output:", data);
+//   return data;
+//   // Example expected structure of data:
+//   // {
+//   //   output: "...",
+//   //   table_data: [...],
+//   //   chart_data: [...]
+//   // }
+// }
 export async function POST(req: NextRequest) {
   
   const { prompt, previousC1Response } = (await req.json()) as {
     prompt: string;
     previousC1Response?: string;
   };
+  console.log("previousC1Response", previousC1Response);
 
   const messages: ChatCompletionMessageParam[] = [];
 
