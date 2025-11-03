@@ -158,6 +158,7 @@ const apiCall = async (prompt: string) => {
   //   chart_data: [...]
   // }
 }
+
 export const makeCompletionApiCall = async ({
   searchQuery,
   previousC1Response,
