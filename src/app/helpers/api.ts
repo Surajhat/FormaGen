@@ -177,13 +177,8 @@ export const makeCompletionApiCall = async ({
     setAbortController(newAbortController);
     setIsLoading(true);
 
-    type BKApiResponse = {
-      output: string;
-      table_data?: any[];
-      chart_data?: any[];
-      [key: string]: any;
-    };
-    const data: BKApiResponse = await apiCall(searchQuery);
+    
+    const data: object = await apiCall(searchQuery);
     const user_prompt = `
     user_query: ${searchQuery}
     output by analysis in  json format: ${JSON.stringify(data)}
