@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ChatProvider } from "./context/ChatContext";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "FormaGen - AI-Powered UI Generator",
-  description: "Generate beautiful UI components with AI, powered by Thesys C1",
-  icons: {
-    icon: "/favicon.ico",
-  },
+  title: "C1 Chat",
+  description: "Generative UI App powered by Thesys C1",
 };
 
 export default function RootLayout({
@@ -22,10 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased`}>
-        <ChatProvider>{children}</ChatProvider>
-      </body>
+    <html lang="en">
+      <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
   );
 }
