@@ -1,292 +1,229 @@
 "use client";
 
-import "@crayonai/react-ui/styles/index.css";
-import { Button } from "@crayonai/react-ui";
-import { ThemeProvider, C1Component } from "@thesysai/genui-sdk";
-import { useUIState } from "./hooks/useUIState";
-import { Loader } from "./components/Loader";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { AppDrawer } from "./components/AppDrawer";
+import { useRouter } from "next/navigation";
+import { useChat } from "./context/ChatContext";
+import { useEffect, useRef } from "react";
 
-const Page = () => {
-  const { state, actions } = useUIState();
-  const [showSaveButton, setShowSaveButton] = useState(false);
+export default function HomePage() {
+  const router = useRouter();
+  const { query, setQuery, sendMessage, isLoading, messages, theme, toggleTheme } = useChat();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isDark = theme === "dark";
 
-  const [sidebarWidth, setSidebarWidth] = useState(320); // Default 320px (w-80)
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-
-  // Show save button when response is complete and not loading
   useEffect(() => {
-    if (state.c1Response && !state.isLoading) {
-      setShowSaveButton(true);
-    }
-  }, [state.c1Response, state.isLoading]);
-
-  // Handle resizing
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
+    textareaRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      
-      const newWidth = e.clientX;
-      // Set min and max constraints (200px to 600px)
-      const constrainedWidth = Math.min(Math.max(200, newWidth), 600);
-      setSidebarWidth(constrainedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+    if (messages.length > 0) {
+      router.push("/chat");
     }
+  }, [messages, router]);
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isResizing]);
+  const handleSend = async () => {
+    if (!query.trim() || isLoading) return;
+    await sendMessage(query);
+    router.push("/chat");
+  };
 
-  const filteredResponses = state.historySearchQuery 
-    ? actions.searchStoredResponses(state.historySearchQuery)
-    : state.storedResponses;
+  const suggestions = [
+    { icon: "📊", text: "Create a dashboard showing sales metrics" },
+    { icon: "👤", text: "Build a user profile card component" },
+    { icon: "📋", text: "Generate a data table with sorting" },
+    { icon: "💰", text: "Design a pricing comparison chart" },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-black">
+    <div
+      className={`min-h-screen flex flex-col transition-all duration-500 ${
+        isDark
+          ? "bg-gradient-to-b from-[#0a0a0a] via-[#0d0d0d] to-[#111111]"
+          : "bg-gradient-to-b from-[#fafafa] via-[#f5f5f5] to-[#f0f0f0]"
+      }`}
+    >
       {/* Header */}
-      <header className="bg-gradient-to-r from-gray-900 via-black to-gray-900 text-white border-b border-gray-800 shadow-lg">
-        <div className="max-w-8xl mx-auto px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-white to-gray-100 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/20 transition-transform hover:scale-105">
-                <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent tracking-tight drop-shadow-lg">
-                  FormaGen
-                </h1>
-                <p className="text-gray-300 text-sm mt-1 font-medium tracking-wide">Intelligent Component Interface</p>
-              </div>
-            </div>
-            <Button
-              onClick={() => actions.setIsHistoryOpen(!state.isHistoryOpen)}
-              className="bg-white text-black hover:bg-gray-100 border border-gray-300 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 font-medium px-4 py-2"
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 ${
+          isDark ? "bg-[#0a0a0a]/90" : "bg-[#fafafa]/90"
+        } backdrop-blur-2xl border-b ${isDark ? "border-white/[0.06]" : "border-black/[0.06]"}`}
+      >
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-20 xl:px-24 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
+                isDark
+                  ? "bg-gradient-to-br from-white to-gray-200 text-black shadow-white/10"
+                  : "bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] text-white shadow-black/20"
+              }`}
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
               </svg>
-              History ({state.storedResponses.length})
-            </Button>
+            </div>
+            <div>
+              <span className={`text-xl font-bold tracking-tight ${isDark ? "text-white" : "text-[#0d0d0d]"}`}>
+                FormaGen
+              </span>
+              <p className={`text-xs mt-0.5 ${isDark ? "text-white/40" : "text-black/40"}`}>
+                AI-Powered UI Generator
+              </p>
+            </div>
           </div>
+          <button
+            onClick={toggleTheme}
+            className={`p-3 rounded-xl transition-all duration-200 ${
+              isDark
+                ? "bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white border border-white/[0.06]"
+                : "bg-black/[0.04] hover:bg-black/[0.08] text-black/70 hover:text-black border border-black/[0.06]"
+            }`}
+          >
+            {isDark ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-93px)] relative">
-        {/* Left Sidebar - Form Section */}
-        <aside 
-          ref={sidebarRef}
-          className="flex-shrink-0 bg-gradient-to-b from-gray-50 to-white border-r border-gray-300 overflow-y-auto shadow-inner"
-          style={{ width: `${sidebarWidth}px` }}
-        >
-          <div className="p-6 space-y-6">
-            {/* Tabs */}
-            <div className="bg-white border border-gray-300 rounded-2xl shadow-lg p-2 backdrop-blur-sm">
-              <div className="flex gap-2">
-                <button
-                  className={`px-4 py-2.5 rounded-xl text-sm font-semibold border flex-1 transition-all duration-200 ${
-                    state.activeTab === "ask" 
-                      ? "bg-gradient-to-r from-black to-gray-800 text-white border-black shadow-lg scale-[1.02]" 
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md"
-                  }`}
-                  onClick={() => actions.setActiveTab("ask")}
-                >
-                  Chat
-                </button>
-                <button
-                  className={`px-4 py-2.5 rounded-xl text-sm font-semibold border flex-1 transition-all duration-200 ${
-                    state.activeTab === "completion" 
-                      ? "bg-gradient-to-r from-black to-gray-800 text-white border-black shadow-lg scale-[1.02]" 
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md"
-                  }`}
-                  onClick={() => actions.setActiveTab("completion")}
-               >
-                  Forma Mode
-                </button>
-              </div>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-8 sm:px-12 lg:px-16 xl:px-20 pt-36 pb-24">
+        <div className="w-full max-w-5xl">
+          {/* Hero */}
+          <div className="text-center mb-14">
+            <div
+              className={`inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-sm font-medium mb-10 ${
+                isDark
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+              }`}
+            >
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              Powered by C1 Components
             </div>
-            
-            {/* Input Section */}
-            <div className="bg-white border border-gray-300 rounded-2xl shadow-xl p-6 backdrop-blur-sm">
-              <div className="space-y-5">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    {state.activeTab === "ask" ? "Start a Conversation" : "Data Analysis"}
-                  </h2>
-                  <p className="text-sm text-gray-600 font-medium">
-                    {state.activeTab === "ask"
-                      ? "Interact with the AI component"
-                      : "Send a prompt to render UI response"}
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="prompt-input" className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                      {state.activeTab === "ask" ? "Your Message" : "Completion Prompt"}
-                    </label>
-                    <div className="relative">
-                      <textarea
-                        id="prompt-input"
-                        rows={4}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl
-                          bg-gradient-to-br from-white to-gray-50 text-gray-900 text-sm placeholder-gray-400
-                          focus:outline-none focus:ring-2 focus:ring-black focus:border-black
-                          shadow-md hover:shadow-lg transition-all duration-200 resize-none
-                          focus:bg-white"
-                        value={state.query}
-                        placeholder={state.activeTab === "ask" ? "Type your message here..." : "Type your completion prompt..."}
-                        onChange={({ target: { value } }) => actions.setQuery(value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !state.isLoading) {
-                            e.preventDefault();
-                            actions.makeApiCall(state.query);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      onClick={() => {
-                        if(state.activeTab=="ask"){
-                          actions.makeApiCall(state.query)
-                        } else {
-                          actions.handleCompletionApiCall(state.query)
-                        }
-                      }}
-                      disabled={state.query.length === 0 || state.isLoading}
-                      className="w-full bg-gradient-to-r from-black to-gray-800 text-white hover:from-gray-800 hover:to-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] font-semibold py-3"
-                      size="medium"
-                    >
-                      {state.isLoading ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader />
-                          <span>Sending...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-2">
-                          <span>Send</span>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                        </div>
-                      )}
-                    </Button>
-                    {showSaveButton && state.c1Response && (
-                      <Button
-                        onClick={() => {
-                          actions.saveResponse(state.query, state.c1Response);
-                          setShowSaveButton(false);
-                        }}
-                        className="w-full bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 hover:from-gray-200 hover:to-gray-100 border-2 border-gray-300 hover:border-gray-400 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] font-medium"
-                        size="small"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Save Response
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 text-center font-medium">
-                    Press <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 shadow-sm">Ctrl</kbd> + <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 shadow-sm">Enter</kbd> to send
-                  </p>
-                </div>
-              </div>
-            </div>
+            <h1
+              className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1] ${
+                isDark ? "text-white" : "text-[#0d0d0d]"
+              }`}
+            >
+              What can I help you
+              <span className={`block mt-2 ${isDark ? "text-white/90" : "text-black/90"}`}>
+                build today?
+              </span>
+            </h1>
+            <p className={`text-lg sm:text-xl max-w-xl mx-auto leading-relaxed ${isDark ? "text-white/50" : "text-black/50"}`}>
+              Describe what you need and watch it come to life with generative UI components.
+            </p>
           </div>
-        </aside>
 
-        {/* Resize Handle */}
-        <div
-          className={`absolute top-0 bottom-0 w-1 bg-gradient-to-b from-gray-300 to-gray-400 hover:from-gray-400 hover:to-gray-500 cursor-col-resize transition-all duration-200 z-10 shadow-lg ${
-            isResizing ? 'from-gray-500 to-gray-600' : ''
-          }`}
-          style={{ left: `${sidebarWidth}px`, transform: 'translateX(-50%)' }}
-          onMouseDown={handleMouseDown}
-        >
-          <div className="absolute inset-y-0 left-1/2 w-6 -translate-x-1/2" />
-        </div>
-
-        {/* Main Content - Response Section */}
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-white">
-          <div className="h-full flex flex-col">
-            <div className="bg-gradient-to-r from-white to-gray-50 border-b-2 border-gray-300 px-6 py-5 flex-shrink-0 shadow-md">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-black to-gray-800 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-gray-200">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    AI Response
-                  </h3>
-                  <p className="text-gray-600 text-sm font-medium">Component interaction and responses will appear below</p>
-                </div>
-                {state.isLoading && (
-                  <div className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 rounded-full shadow-inner">
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full animate-bounce"></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                  </div>
+          {/* Input Card */}
+          <div
+            className={`rounded-3xl shadow-2xl ${
+              isDark
+                ? "bg-[#161616] shadow-black/40 border border-white/[0.08]"
+                : "bg-white shadow-black/[0.08] border border-black/[0.06]"
+            }`}
+          >
+            <div className="px-6 pt-6 pb-4">
+              <textarea
+                ref={textareaRef}
+                rows={4}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !isLoading) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Describe what you want to build..."
+                className={`w-full resize-none text-lg bg-transparent focus:outline-none leading-relaxed ${
+                  isDark
+                    ? "text-white placeholder-white/30"
+                    : "text-[#0d0d0d] placeholder-black/30"
+                }`}
+              />
+            </div>
+            <div
+              className={`px-6 py-5 flex items-center justify-between border-t ${
+                isDark ? "border-white/[0.06] bg-white/[0.02]" : "border-black/[0.04] bg-black/[0.01]"
+              }`}
+            >
+              <span className={`text-sm flex items-center gap-2 ${isDark ? "text-white/30" : "text-black/30"}`}>
+                <kbd className={`px-2.5 py-1.5 rounded-lg text-xs font-medium ${isDark ? "bg-white/[0.06] text-white/50" : "bg-black/[0.04] text-black/50"}`}>⌘</kbd>
+                <span>+</span>
+                <kbd className={`px-2.5 py-1.5 rounded-lg text-xs font-medium ${isDark ? "bg-white/[0.06] text-white/50" : "bg-black/[0.04] text-black/50"}`}>Enter</kbd>
+                <span className="ml-1">to send</span>
+              </span>
+              <button
+                onClick={handleSend}
+                disabled={!query.trim() || isLoading}
+                className={`flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none hover:scale-[1.02] active:scale-[0.98] ${
+                  isDark
+                    ? "bg-white text-black hover:bg-white/95 shadow-lg shadow-white/10"
+                    : "bg-[#0d0d0d] text-white hover:bg-black/90 shadow-lg shadow-black/20"
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Generate UI</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </>
                 )}
-              </div>
-            </div>
-            <div className="flex-1 p-8 overflow-y-auto bg-gradient-to-b from-transparent to-gray-50/30">
-              <ThemeProvider>
-                <C1Component
-                  c1Response={state.c1Response}
-                  isStreaming={state.isLoading}
-                  updateMessage={(message) => actions.setC1Response(message)}
-                  onAction={({ llmFriendlyMessage }) => {
-                    if (!state.isLoading) {
-                      actions.makeApiCall(llmFriendlyMessage, state.c1Response);
-                    }
-                  }}
-                />
-              </ThemeProvider>
+              </button>
             </div>
           </div>
-        </main>
 
-        {/* App Drawer */}
-        <AppDrawer
-          isOpen={state.isHistoryOpen}
-          onClose={() => actions.setIsHistoryOpen(false)}
-          storedResponses={filteredResponses}
-          onLoadResponse={(r) => actions.loadResponse(r)}
-          onReRun={(r) => actions.reRunWithStored(r)}
-          onDelete={(id) => actions.deleteResponse(id)}
-          onUpdate={(id, updates) => actions.updateResponse(id, updates)}
-          setC1Response={actions.setC1Response}
-        />
-      </div>
+          {/* Suggestions */}
+          <div className="mt-12">
+            <p className={`text-sm font-medium mb-6 ${isDark ? "text-white/40" : "text-black/40"}`}>
+              Try one of these examples
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {suggestions.map((suggestion, i) => (
+                <button
+                  key={i}
+                  onClick={() => setQuery(suggestion.text)}
+                  className={`group text-left px-6 py-5 rounded-2xl text-sm transition-all duration-200 ${
+                    isDark
+                      ? "bg-white/[0.03] hover:bg-white/[0.06] text-white/70 hover:text-white border border-white/[0.06] hover:border-white/[0.12]"
+                      : "bg-black/[0.02] hover:bg-black/[0.04] text-black/70 hover:text-black border border-black/[0.04] hover:border-black/[0.08]"
+                  }`}
+                >
+                  <span className="flex items-start gap-4">
+                    <span className="text-xl mt-0.5">{suggestion.icon}</span>
+                    <span className="leading-relaxed flex-1">{suggestion.text}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className={`py-12 px-8 text-center border-t ${isDark ? "border-white/[0.04]" : "border-black/[0.04]"}`}>
+        <p className={`text-sm ${isDark ? "text-white/25" : "text-black/25"}`}>
+          Built with C1 by Thesys • Generative UI Components
+        </p>
+      </footer>
     </div>
   );
-};
-
-export default Page;
+}
