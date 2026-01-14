@@ -34,17 +34,22 @@ export const makeApiCall = async ({
   setAbortController,
   onResponseComplete,
 }: ApiCallParams) => {
+  // Cancel any ongoing request before starting a new one
+  if (abortController) {
+    abortController.abort();
+  }
+
+  // Create and set up a new abort controller for this request
+  const newAbortController = new AbortController();
+  setAbortController(newAbortController);
+  
+  // Set loading state to true when streaming starts
+  setIsLoading(true);
+  
+  // Clear previous response to show fresh streaming content
+  setC1Response("");
+
   try {
-    // Cancel any ongoing request before starting a new one
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create and set up a new abort controller for this request
-    const newAbortController = new AbortController();
-    setAbortController(newAbortController);
-    setIsLoading(true);
-
     // Make the API request with the abort signal
     const response = await fetch("/api/ask", {
       method: "POST",
@@ -58,7 +63,10 @@ export const makeApiCall = async ({
       signal: newAbortController.signal,
     });
 
-    console.log("response", response.body);
+    // Check if response is ok
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     // Set up stream reading utilities
     const decoder = new TextDecoder();
@@ -74,17 +82,16 @@ export const makeApiCall = async ({
     // Read the stream chunk by chunk
     while (true) {
       const { done, value } = await stream.read();
-      // Decode the chunk, considering if it's the final chunk
-      const chunk = decoder.decode(value, { stream: !done });
-
-      // Accumulate response and update state
-      streamResponse += chunk;
-      console.log("streamResponse", streamResponse);
-      console.log("chunk", chunk);
-      console.log("type of chunk", typeof chunk);
-      setC1Response(streamResponse);
-
-      // Break the loop when stream is complete
+      
+      // Decode the chunk (use stream: !done to handle final chunk correctly)
+      if (value) {
+        const chunk = decoder.decode(value, { stream: !done });
+        streamResponse += chunk;
+        // Update state incrementally as chunks arrive
+        setC1Response(streamResponse);
+      }
+      
+      // If stream is done, break after processing final chunk
       if (done) {
         break;
       }
@@ -94,10 +101,19 @@ export const makeApiCall = async ({
     if (onResponseComplete && streamResponse.trim()) {
       onResponseComplete(searchQuery, streamResponse);
     }
+
+    // Set loading to false AFTER all processing is complete
+    // This ensures isStreaming becomes false only after all chunks are processed
+    setIsLoading(false);
+    setAbortController(null);
   } catch (error) {
-    console.error("Error in makeApiCall:", error);
-  } finally {
-    // Clean up: reset loading state and abort controller
+    // Handle abort errors gracefully
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log("Request was aborted");
+    } else {
+      console.error("Error in makeApiCall:", error);
+    }
+    // Set loading to false on error as well
     setIsLoading(false);
     setAbortController(null);
   }
@@ -168,16 +184,21 @@ export const makeCompletionApiCall = async ({
   setAbortController,
   onResponseComplete,
 }: ApiCallParams) => {
+  // Cancel any ongoing request before starting a new one
+  if (abortController) {
+    abortController.abort();
+  }
+
+  const newAbortController = new AbortController();
+  setAbortController(newAbortController);
+  
+  // Set loading state to true when streaming starts
+  setIsLoading(true);
+  
+  // Clear previous response to show fresh streaming content
+  setC1Response("");
+
   try {
-    if (abortController) {
-      abortController.abort();
-    }
-
-    const newAbortController = new AbortController();
-    setAbortController(newAbortController);
-    setIsLoading(true);
-
-    
     const data: object = await apiCall(searchQuery);
     const user_prompt = `
     user_query: ${searchQuery}
@@ -197,6 +218,11 @@ export const makeCompletionApiCall = async ({
       signal: newAbortController.signal,
     });
 
+    // Check if response is ok
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const decoder = new TextDecoder();
     const stream = response.body?.getReader();
     if (!stream) {
@@ -204,20 +230,41 @@ export const makeCompletionApiCall = async ({
     }
 
     let streamResponse = "";
+    
+    // Read the stream chunk by chunk
     while (true) {
       const { done, value } = await stream.read();
-      const chunk = decoder.decode(value, { stream: !done });
-      streamResponse += chunk;
-      setC1Response(streamResponse);
-      if (done) break;
+      
+      // Decode the chunk (use stream: !done to handle final chunk correctly)
+      if (value) {
+        const chunk = decoder.decode(value, { stream: !done });
+        streamResponse += chunk;
+        // Update state incrementally as chunks arrive
+        setC1Response(streamResponse);
+      }
+      
+      // If stream is done, break after processing final chunk
+      if (done) {
+        break;
+      }
     }
 
     if (onResponseComplete && streamResponse.trim()) {
       onResponseComplete(searchQuery, streamResponse);
     }
+
+    // Set loading to false AFTER all processing is complete
+    // This ensures isStreaming becomes false only after all chunks are processed
+    setIsLoading(false);
+    setAbortController(null);
   } catch (error) {
-    console.error("Error in makeCompletionApiCall:", error);
-  } finally {
+    // Handle abort errors gracefully
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log("Request was aborted");
+    } else {
+      console.error("Error in makeCompletionApiCall:", error);
+    }
+    // Set loading to false on error as well
     setIsLoading(false);
     setAbortController(null);
   }
