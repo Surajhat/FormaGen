@@ -57,16 +57,19 @@ export const useUIState = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   // State for history search query
   const [historySearchQuery, setHistorySearchQuery] = useState("");
-  // Tab selection state
+  // Tab selection state (default to chat/ask mode for two-page flow)
   const [activeTab, setActiveTab] = useState<"ask" | "completion">("completion");
   // Guard to auto-load most recent only once
   const hasAutoLoadedMostRecentRef = useRef(false);
 
-  // Load stored responses from localStorage on component mount
+  const STORAGE_KEY = "thesys-session-responses";
+
+  // Load stored responses from sessionStorage on component mount
   useEffect(() => {
     const loadStoredResponses = () => {
       try {
-        const stored = localStorage.getItem("thesys-responses");
+        if (typeof window === "undefined") return;
+        const stored = sessionStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
           setStoredResponses(parsed);
@@ -93,12 +96,13 @@ export const useUIState = () => {
     }
   }, [storedResponses, c1Response]);
 
-  // Save responses to localStorage whenever storedResponses changes
+  // Save responses to sessionStorage whenever storedResponses changes
   useEffect(() => {
     try {
-      localStorage.setItem("thesys-responses", JSON.stringify(storedResponses));
+      if (typeof window === "undefined") return;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(storedResponses));
     } catch (error) {
-      console.error("Error saving responses to localStorage:", error);
+      console.error("Error saving responses to sessionStorage:", error);
     }
   }, [storedResponses]);
 
